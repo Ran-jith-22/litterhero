@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'LitterHero - Cloud Infrastructure for Community-Powered Environmental Waste Verification Platform'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: 'production'
+    AllowedValues: ['development', 'staging', 'production']
+    Description: 'Deployment environment tier'
+
+Resources:
+  # ==========================================
+  # 1. AMAZON S3: SECURE EVIDENCE PHOTO STORAGE
+  # ==========================================
+  EvidencePhotoBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'litterhero-evidence-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: ['GET', 'PUT', 'POST']
+            AllowedOrigins: ['*']
+            MaxAge: 3600
+
+  # ==========================================
+  # 2. AMAZON DYNAMODB: PERSISTENT HIGH-SPEED STORES
+  # ==========================================
+  ReportsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'LitterHero_Reports'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: 'S'
+        - AttributeName: 'category'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'id'
+          KeyType: 'HASH'
+      GlobalSecondaryIndexes:
+        - IndexName: 'CategoryIndex'
+          KeySchema:
+            - AttributeName: 'category'
+              KeyType: 'HASH'
+          Projection:
+            ProjectionType: 'ALL'
+
+  MissionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'LitterHero_Missions'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: 'S'
+        - AttributeName: 'status'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'id'
+          KeyType: 'HASH'
+      GlobalSecondaryIndexes:
+        - IndexName: 'StatusIndex'
+          KeySchema:
+            - AttributeName: 'status'
+              KeyType: 'HASH'
+          Projection:
+            ProjectionType: 'ALL'
+
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: 'LitterHero_Users'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: 'id'
+          AttributeType: 'S'
+        - AttributeName: 'email'
+          AttributeType: 'S'
+      KeySchema:
+        - AttributeName: 'id'
+          KeyType: 'HASH'
+      GlobalSecondaryIndexes:
+        - IndexName: 'EmailIndex'
+          KeySchema:
+            - AttributeName: 'email'
+              KeyType: 'HASH'
+          Projection:
+            ProjectionType: 'ALL'
+
+  # ==========================================
+  # 3. AMAZON COGNITO: ROLE-BASED AUTHENTICATION
+  # ==========================================
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: 'LitterHero_UserPool'
+      UsernameAttributes: ['email']
+      AutoVerifiedAttributes: ['email']
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      Schema:
+        - Name: 'role'
+          AttributeDataType: 'String'
+          Mutable: true
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: 'LitterHero_WebClient'
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  AdminUserGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: 'Administrators'
+      Description: 'Authorized LitterHero verification moderators'
+      UserPoolId: !Ref UserPool
+      Precedence: 0
+
+  # ==========================================
+  # 4. CLOUDWATCH: LOGGING & MONITORING
+  # ==========================================
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '/aws/litterhero/api'
+      RetentionInDays: 14
+
+Outputs:
+  EvidenceBucketName:
+    Description: 'S3 Bucket Name for Evidence Photos'
+    Value: !Ref EvidencePhotoBucket
+
+  CognitoUserPoolId:
+    Description: 'Cognito User Pool ID'
+    Value: !Ref UserPool
+
+  CognitoClientId:
+    Description: 'Cognito Web Client ID'
+    Value: !Ref UserPoolClient

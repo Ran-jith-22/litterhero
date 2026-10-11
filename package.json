@@ -1,0 +1,38 @@
+{
+  "name": "litterhero",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LitterHero - Spot it. Report it. Clean it. Prove it. Community-powered environmental cleanup platform.",
+  "scripts": {
+    "build": "npm run build:frontend",
+    "vercel-build": "npm install --prefix frontend && npm run build --prefix frontend",
+    "build:frontend": "npm run build --prefix frontend",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "test:backend": "npm run test --prefix backend",
+    "test": "npm run test:backend"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.750.0",
+    "@aws-sdk/client-s3": "^3.750.0",
+    "@aws-sdk/lib-dynamodb": "^3.750.0",
+    "@aws-sdk/s3-request-presigner": "^3.750.0",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "keywords": [
+    "litterhero",
+    "environment",
+    "civic-tech",
+    "waste-management",
+    "aws",
+    "react"
+  ],
+  "author": "LitterHero Team",
+  "license": "MIT"
+}
